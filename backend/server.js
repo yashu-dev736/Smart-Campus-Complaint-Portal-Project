@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
@@ -7,32 +8,60 @@ const authRoutes = require("./routes/authRoutes");
 const complaintRoutes = require("./routes/complaintRoutes");
 const userRoutes = require("./routes/userRoutes");
 
+// Connect to MongoDB
 connectDB();
 
 const app = express();
 
+// Middleware
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
   })
 );
+
 app.use(express.json());
 
-app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+// Root Route
+app.get("/", (req, res) => {
+  res.json({
+    message: "🚀 Smart Campus Complaint Backend is Running",
+  });
+});
 
+// Health Check Route
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+  });
+});
+
+// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/users", userRoutes);
 
-// 404 handler
-app.use((req, res) => res.status(404).json({ message: "Route not found" }));
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "Server error", error: err.message });
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({
+    message: "Route not found",
+  });
 });
 
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+
+  res.status(500).json({
+    message: "Server Error",
+    error: err.message,
+  });
+});
+
+// Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
