@@ -22,7 +22,11 @@ app.use(
 );
 
 app.use(express.json());
-
+app.get("/", (req, res) => {
+  res.json({
+    message: "🚀 Smart Campus Complaint Backend is Running",
+  });
+});
 // Root Route
 app.get("/", (req, res) => {
   res.json({
