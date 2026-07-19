@@ -16,14 +16,15 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("scc_token", data.token);
-    localStorage.setItem("scc_user", JSON.stringify(data.user));
-    setUser(data.user);
-    return data.user;
-  };
-
+const login = async (email, password) => {
+  // This combines with baseURL to make: .../render.com/api/auth/login
+  const { data } = await api.post("/api/auth/login", { email, password });
+  
+  localStorage.setItem("scc_token", data.token);
+  localStorage.setItem("scc_user", JSON.stringify(data.user));
+  setUser(data.user);
+  return data.user;
+};
   const register = async (payload) => {
     const { data } = await api.post("/auth/register", payload);
     localStorage.setItem("scc_token", data.token);
