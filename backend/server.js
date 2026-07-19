@@ -14,12 +14,13 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://agent-6a5c81052fe53e354--stellar-monstera-21d205.netlify.app"
+  ],
+  credentials: true
+}));
 
 app.use(express.json());
 app.get("/", (req, res) => {
