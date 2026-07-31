@@ -1,61 +1,184 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
-
-const dashboardPath = (role) => {
-  if (role === "admin") return "/admin";
-  if (role === "staff") return "/staff";
-  return "/parent";
-};
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const { setUser, setToken } = useAuth();
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleLogin = async (e) => {
+    e.preventDefault(); // Prevents page reload
+    setError('');
+    setLoading(true);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSubmitting(true);
     try {
-      const user = await login(form.email, form.password);
-      navigate(dashboardPath(user.role));
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Save user session and token in context and localStorage
+      setUser(data.user);
+      setToken(data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', JSON.stringify(data.token));
+
+      // Redirect based on role or to home/dashboard
+      if (data.user.role === 'admin') {
+        navigate('/admin-dashboard');
+      } else if (data.user.role === 'staff') {
+        navigate('/staff-dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.message || 'Invalid email or password');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="container auth-shell">
-      <div className="panel">
-        <span className="eyebrow">Welcome back</span>
-        <h2>Log in to your desk</h2>
-        {error && <div className="form-error">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label>Email</label>
-            <input type="email" name="email" value={form.email} onChange={handleChange} required />
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h2 style={styles.title}>Log in to your desk</h2>
+        
+        {error && <div style={styles.errorBanner}>{error}</div>}
+
+        <form onSubmit={handleLogin} style={styles.form}>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={styles.input}
+              placeholder="Enter your email"
+            />
           </div>
-          <div className="field">
-            <label>Password</label>
-            <input type="password" name="password" value={form.password} onChange={handleChange} required />
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={styles.input}
+              placeholder="Enter your password"
+            />
           </div>
-          <button className="btn btn-primary btn-block" disabled={submitting}>
-            {submitting ? "Logging in..." : "Log in"}
+
+          <button 
+            type="submit" 
+            disabled={loading} 
+            style={styles.button}
+          >
+            {loading ? 'Logging in...' : 'Log in'}
           </button>
         </form>
-        <p style={{ marginTop: 16, fontSize: "0.85rem", color: "var(--ink-soft)" }}>
-          No account yet? <Link to="/register">Register here</Link>
+
+        <p style={styles.footerText}>
+          No account yet? <Link to="/register" style={styles.link}>Register here</Link>
         </p>
       </div>
     </div>
   );
+};
+
+// Clean styling object matching your UI design
+const styles = {
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '80vh',
+    padding: '20px',
+  },
+  card: {
+    width: '100%',
+    maxWidth: '420px',
+    background: '#ffffff',
+    padding: '30px',
+    borderRadius: '12px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  },
+  title: {
+    marginBottom: '20px',
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  label: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#374151',
+  },
+  input: {
+    padding: '10px 14px',
+    borderRadius: '8px',
+    border: '1px solid #D1D5DB',
+    fontSize: '14px',
+    outline: 'none',
+  },
+  button: {
+    marginTop: '10px',
+    padding: '12px',
+    borderRadius: '8px',
+    border: 'none',
+    background: '#0F172A',
+    color: '#ffffff',
+    fontSize: '15px',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  errorBanner: {
+    marginBottom: '15px',
+    padding: '10px',
+    background: '#FEE2E2',
+    color: '#991B1B',
+    borderRadius: '6px',
+    fontSize: '14px',
+  },
+  footerText: {
+    marginTop: '20px',
+    textAlign: 'center',
+    fontSize: '14px',
+    color: '#6B7280',
+  },
+  link: {
+    color: '#2563EB',
+    textDecoration: 'none',
+    fontWeight: '500',
+  }
 };
 
 export default Login;

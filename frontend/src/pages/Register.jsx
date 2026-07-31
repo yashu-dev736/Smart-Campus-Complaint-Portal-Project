@@ -1,95 +1,214 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
-
-const dashboardPath = (role) => {
-  if (role === "admin") return "/admin";
-  if (role === "staff") return "/staff";
-  return "/parent";
-};
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Register = () => {
-  const { register } = useAuth();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('student');
+  const [department, setDepartment] = useState('General');
+  
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "parent",
-    department: "General",
-  });
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleRegister = async (e) => {
+    e.preventDefault(); // Prevents page reload
+    setError('');
+    setLoading(true);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSubmitting(true);
     try {
-      const user = await register(form);
-      navigate(dashboardPath(user.role));
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName,
+          email,
+          password,
+          role,
+          department
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      // Registration successful, redirect to login page
+      navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      setError(err.message);
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="container auth-shell">
-      <div className="panel">
-        <span className="eyebrow">Get started</span>
-        <h2>Create your account</h2>
-        {error && <div className="form-error">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label>Full name</label>
-            <input name="name" value={form.name} onChange={handleChange} required />
-          </div>
-          <div className="field">
-            <label>Email</label>
-            <input type="email" name="email" value={form.email} onChange={handleChange} required />
-          </div>
-          <div className="field">
-            <label>Password</label>
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h2 style={styles.title}>Create your account</h2>
+        
+        {error && <div style={styles.errorBanner}>{error}</div>}
+
+        <form onSubmit={handleRegister} style={styles.form}>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Full name</label>
             <input
-              type="password"
-              name="password"
-              minLength={6}
-              value={form.password}
-              onChange={handleChange}
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               required
+              style={styles.input}
+              placeholder="Enter your full name"
             />
           </div>
-          <div className="field">
-            <label>Role</label>
-            <select name="role" value={form.role} onChange={handleChange}>
-              <option value="parent">Parent</option>
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={styles.input}
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              style={styles.input}
+              placeholder="At least 6 characters"
+            />
+          </div>
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              style={styles.input}
+            >
+              <option value="student">Student</option>
               <option value="staff">Staff</option>
               <option value="admin">Admin</option>
             </select>
           </div>
-          <div className="field">
-            <label>Department</label>
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Department</label>
             <input
-              name="department"
-              placeholder="e.g. Hostel, IT, Electrical"
-              value={form.department}
-              onChange={handleChange}
+              type="text"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              required
+              style={styles.input}
+              placeholder="e.g. Computer Science, General"
             />
           </div>
-          <button className="btn btn-primary btn-block" disabled={submitting}>
-            {submitting ? "Creating account..." : "Create account"}
+
+          <button 
+            type="submit" 
+            disabled={loading} 
+            style={styles.button}
+          >
+            {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
-        <p style={{ marginTop: 16, fontSize: "0.85rem", color: "var(--ink-soft)" }}>
-          Already registered? <Link to="/login">Log in</Link>
+
+        <p style={styles.footerText}>
+          Already registered? <Link to="/login" style={styles.link}>Log in</Link>
         </p>
       </div>
     </div>
   );
+};
+
+// Clean styling object for layout representation
+const styles = {
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '80vh',
+    padding: '20px',
+  },
+  card: {
+    width: '100%',
+    maxWidth: '420px',
+    background: '#ffffff',
+    padding: '30px',
+    borderRadius: '12px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  },
+  title: {
+    marginBottom: '20px',
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  label: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#374151',
+  },
+  input: {
+    padding: '10px 14px',
+    borderRadius: '8px',
+    border: '1px solid #D1D5DB',
+    fontSize: '14px',
+    outline: 'none',
+  },
+  button: {
+    marginTop: '10px',
+    padding: '12px',
+    borderRadius: '8px',
+    border: 'none',
+    background: '#0F172A',
+    color: '#ffffff',
+    fontSize: '15px',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  errorBanner: {
+    marginBottom: '15px',
+    padding: '10px',
+    background: '#FEE2E2',
+    color: '#991B1B',
+    borderRadius: '6px',
+    fontSize: '14px',
+  },
+  footerText: {
+    marginTop: '20px',
+    textAlign: 'center',
+    fontSize: '14px',
+    color: '#6B7280',
+  },
+  link: {
+    color: '#2563EB',
+    textDecoration: 'none',
+    fontWeight: '500',
+  }
 };
 
 export default Register;

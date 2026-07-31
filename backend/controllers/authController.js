@@ -1,81 +1,121 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-const sendEmail = require("../utils/sendEmail");
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { db } = require('../config/firebase');
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-  });
-};
-
-// @route POST /api/auth/register
+// Register Controller
 const register = async (req, res) => {
   try {
-    const { name, email, password, role, department } = req.body;
+    const { fullName, email, password, role, department } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email and password are required" });
+    if (!email || !password || !fullName || !role) {
+      return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
-    if (existing) {
-      return res.status(400).json({ message: "An account with this email already exists" });
+    // Check if user already exists in Firestore
+    const usersRef = db.collection('users');
+    const snapshot = await usersRef.where('email', '==', email).get();
+
+    if (!snapshot.empty) {
+      return res.status(400).json({ message: 'The email address is already in use by another account.' });
     }
 
-    // Only allow "parent" role for public self-registration by default.
-    // staff/admin accounts should be created by an existing admin via /api/users (protected route)
-    // but we allow it here for ease of setup/demo purposes when no admin exists yet.
-    const allowedRole = ["parent", "staff", "admin"].includes(role) ? role : "parent";
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    const user = await User.create({
-      name,
+    // Create new user document
+    const newUserRef = usersRef.doc();
+    const userData = {
+      uid: newUserRef.id,
+      fullName,
       email,
-      password,
-      role: allowedRole,
-      department: department || "General",
+      password: hashedPassword,
+      role,
+      department: department || 'General',
+      isActive: true,
+      createdAt: new Date().toISOString()
+    };
+
+    await newUserRef.set(userData);
+
+    // Generate JWT Token
+    const token = jwt.sign(
+      { id: newUserRef.id, email, role },
+      process.env.JWT_SECRET || 'your_jwt_secret',
+      { expiresIn: '1d' }
+    );
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: {
+        id: newUserRef.id,
+        fullName,
+        email,
+        role,
+        department: userData.department
+      }
     });
-
-    const token = generateToken(user._id);
-
-    sendEmail({
-      to: user.email,
-      subject: "Welcome to Smart Campus Complaint System",
-      html: `<p>Hi ${user.name},</p><p>Your account has been created successfully as <b>${user.role}</b>.</p>`,
-    });
-
-    res.status(201).json({ token, user: user.toSafeObject() });
-  } catch (err) {
-    res.status(500).json({ message: "Registration failed", error: err.message });
+  } catch (error) {
+    console.error('Registration Error:', error);
+    res.status(500).json({ message: 'Server error during registration' });
   }
 };
 
-// @route POST /api/auth/login
+// Login Controller
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res.status(400).json({ message: 'Please provide email and password' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user || !(await user.matchPassword(password))) {
-      return res.status(401).json({ message: "Invalid email or password" });
+    // Find user by email
+    const usersRef = db.collection('users');
+    const snapshot = await usersRef.where('email', '==', email).get();
+
+    if (snapshot.empty) {
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    if (!user.isActive) {
-      return res.status(403).json({ message: "This account has been deactivated" });
+    let userData = null;
+    snapshot.forEach(doc => {
+      userData = { id: doc.id, ...doc.data() };
+    });
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, userData.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = generateToken(user._id);
-    res.json({ token, user: user.toSafeObject() });
-  } catch (err) {
-    res.status(500).json({ message: "Login failed", error: err.message });
+    // Generate JWT Token
+    const token = jwt.sign(
+      { id: userData.id, email: userData.email, role: userData.role },
+      process.env.JWT_SECRET || 'your_jwt_secret',
+      { expiresIn: '1d' }
+    );
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: userData.id,
+        name: userData.fullName || userData.name,
+        email: userData.email,
+        role: userData.role,
+        department: userData.department
+      }
+    });
+  } catch (error) {
+    console.error('Login Error:', error);
+    res.status(500).json({ message: 'Server error during login' });
   }
 };
 
-// @route GET /api/auth/me
-const getMe = async (req, res) => {
-  res.json({ user: req.user.toSafeObject ? req.user.toSafeObject() : req.user });
+// Explicit exports to fix [object Undefined] issues
+module.exports = {
+  register,
+  login
 };
-
-module.exports = { register, login, getMe };

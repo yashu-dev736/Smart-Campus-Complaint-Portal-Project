@@ -1,49 +1,39 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../api/axios";
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const AuthContext = createContext(null);
+// 1. Create the Context
+const AuthContext = createContext();
 
+// 2. Create the Provider Component
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("scc_user");
-    const token = localStorage.getItem("scc_token");
-    if (stored && token) {
-      setUser(JSON.parse(stored));
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser && savedUser !== "undefined" ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      return null;
     }
-    setLoading(false);
-  }, []);
+  });
 
-const login = async (email, password) => {
-  // This combines with baseURL to make: .../render.com/api/auth/login
-  const { data } = await api.post("/api/auth/login", { email, password });
-  
-  localStorage.setItem("scc_token", data.token);
-  localStorage.setItem("scc_user", JSON.stringify(data.user));
-  setUser(data.user);
-  return data.user;
-};
-  const register = async (payload) => {
-    const { data } = await api.post("/auth/register", payload);
-    localStorage.setItem("scc_token", data.token);
-    localStorage.setItem("scc_user", JSON.stringify(data.user));
-    setUser(data.user);
-    return data.user;
-  };
-
-  const logout = () => {
-    localStorage.removeItem("scc_token");
-    localStorage.removeItem("scc_user");
-    setUser(null);
-  };
+  const [token, setToken] = useState(() => {
+    try {
+      const savedToken = localStorage.getItem('token');
+      return savedToken && savedToken !== "undefined" ? JSON.parse(savedToken) : null;
+    } catch (error) {
+      return null;
+    }
+  });
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, setUser, token, setToken }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+// 3. Create and export the useAuth custom hook
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+// 4. Default export or named exports
+export { AuthContext };

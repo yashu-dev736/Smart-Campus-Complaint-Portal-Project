@@ -1,10 +1,11 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { register, login, getMe } = require("../controllers/authController");
-const { protect } = require("../middleware/auth");
 
-router.post("/register", register);
-router.post("/login", login);
-router.get("/me", protect, getMe);
+// Import controller functions matching the exports above
+const { register, login } = require('../controllers/authController');
+
+// Define routes with proper callback assignments
+router.post('/register', register);
+router.post('/login', login);
 
 module.exports = router;
