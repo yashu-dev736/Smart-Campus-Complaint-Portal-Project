@@ -10,3 +10,9 @@
 # Build folders
 dist/
 build/
+
+# Firebase credentials
+backend/config/serviceAccountKey.json
+**/serviceAccountKey.json
+.env
+.env.*
