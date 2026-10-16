@@ -14,4 +14,4 @@ db = getFirestore();
 
 console.log("Firebase Firestore Connected Successfully!");
 
-module.exports = { db };
+module.exports = { db, admin };

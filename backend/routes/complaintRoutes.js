@@ -1,18 +1,87 @@
 const express = require('express');
 const router = express.Router();
 
-// Import controller functions safely
-const { 
-  getComplaints, 
-  getComplaintStats, 
-  createComplaint 
+const authMiddleware = require('../middleware/authMiddleware');
+
+const {
+  getComplaints,
+  getComplaintStats,
+  createComplaint,
+  updateComplaintStatus,
+  addComment,
+  deleteComplaint,
+  getParentComplaints
 } = require('../controllers/complaintController');
 
-const verifyToken = require('../middleware/authMiddleware');
 
-// Define routes with proper functions
-router.get('/', verifyToken, getComplaints);
-router.get('/stats', verifyToken, getComplaintStats);
-router.post('/', verifyToken, createComplaint);
+// ============================================
+// GET PARENT COMPLAINTS
+// ============================================
+router.get(
+  '/parent',
+  authMiddleware,
+  getParentComplaints
+);
+
+
+// ============================================
+// GET ALL COMPLAINTS
+// ============================================
+router.get(
+  '/',
+  authMiddleware,
+  getComplaints
+);
+
+
+// ============================================
+// GET COMPLAINT STATISTICS
+// ============================================
+router.get(
+  '/stats',
+  authMiddleware,
+  getComplaintStats
+);
+
+
+// ============================================
+// CREATE NEW COMPLAINT
+// ============================================
+router.post(
+  '/',
+  authMiddleware,
+  createComplaint
+);
+
+
+// ============================================
+// UPDATE COMPLAINT STATUS
+// ============================================
+router.patch(
+  '/:id/status',
+  authMiddleware,
+  updateComplaintStatus
+);
+
+
+// ============================================
+// ADD COMMENT
+// ============================================
+router.post(
+  '/:id/comments',
+  authMiddleware,
+  addComment
+);
+
+
+// ============================================
+// DELETE COMPLAINT
+// ============================================
+router.delete(
+  '/:id',
+  authMiddleware,
+  deleteComplaint
+);
+
 
 module.exports = router;

@@ -1,184 +1,361 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useRef, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { setUser, setToken } = useAuth();
+  const { login } = useAuth();
+
+  const passwordRef = useRef(null);
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const API_URL = "http://localhost:5000/api";
+
+  // ==========================================
+  // EMAIL ENTER KEY
+  // Move cursor to Password
+  // ==========================================
+
+  const handleEmailKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      if (!email.trim()) {
+        setError("Please enter your email.");
+        return;
+      }
+
+      setError("");
+
+      passwordRef.current?.focus();
+    }
+  };
+
+  // ==========================================
+  // LOGIN
+  // ==========================================
 
   const handleLogin = async (e) => {
-    e.preventDefault(); // Prevents page reload
-    setError('');
-    setLoading(true);
+    e.preventDefault();
+
+    setError("");
+
+    if (!email.trim()) {
+      setError("Please enter your email.");
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Please enter your password.");
+      return;
+    }
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password
-        }),
-      });
+      setLoading(true);
 
-      const data = await response.json();
+      const response = await axios.post(
+        `${API_URL}/auth/login`,
+        {
+          email: email.trim(),
+          password,
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+      const data = response.data;
+
+      console.log("Login Response:", data);
+
+      if (!data.token || !data.user) {
+        setError("Invalid login response from server.");
+        return;
       }
 
-      // Save user session and token in context and localStorage
-      setUser(data.user);
-      setToken(data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('token', JSON.stringify(data.token));
+      // Save user and token
+      login(data.user, data.token);
 
-      // Redirect based on role or to home/dashboard
-      if (data.user.role === 'admin') {
-        navigate('/admin-dashboard');
-      } else if (data.user.role === 'staff') {
-        navigate('/staff-dashboard');
+      const role = data.user.role?.toLowerCase();
+
+      // Redirect based on role
+      if (role === "admin") {
+        navigate("/admin-dashboard");
+      } else if (role === "staff") {
+        navigate("/staff-dashboard");
+      } else if (role === "parent") {
+        navigate("/parent-dashboard");
       } else {
-        navigate('/dashboard');
+        setError(`Unknown user role: ${data.user.role}`);
       }
-    } catch (err) {
-      setError(err.message || 'Invalid email or password');
+
+    } catch (error) {
+      console.error("Login Error:", error);
+
+      if (error.response) {
+        setError(
+          error.response.data?.message ||
+          "Invalid email or password."
+        );
+      } else {
+        setError("Unable to connect to the server.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>Log in to your desk</h2>
-        
-        {error && <div style={styles.errorBanner}>{error}</div>}
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f8fafc",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "430px",
+          background: "#ffffff",
+          borderRadius: "16px",
+          padding: "35px",
+          boxShadow:
+            "0 10px 35px rgba(15, 23, 42, 0.10)",
+        }}
+      >
 
-        <form onSubmit={handleLogin} style={styles.form}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Email</label>
+        {/* =====================================
+            HEADER
+        ====================================== */}
+
+        <div
+          style={{
+            textAlign: "center",
+            marginBottom: "30px",
+          }}
+        >
+          <div
+            style={{
+              width: "55px",
+              height: "55px",
+              margin: "0 auto 15px",
+              borderRadius: "14px",
+              background: "#2563eb",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "22px",
+              fontWeight: "700",
+            }}
+          >
+            SC
+          </div>
+
+          <h1
+            style={{
+              margin: 0,
+              color: "#0f172a",
+              fontSize: "26px",
+            }}
+          >
+            Welcome Back
+          </h1>
+
+          <p
+            style={{
+              marginTop: "8px",
+              color: "#64748b",
+              fontSize: "14px",
+            }}
+          >
+            Login to Smart Campus Complaint Portal
+          </p>
+        </div>
+
+        {/* =====================================
+            ERROR MESSAGE
+        ====================================== */}
+
+        {error && (
+          <div
+            style={{
+              background: "#fef2f2",
+              color: "#dc2626",
+              border: "1px solid #fecaca",
+              padding: "12px",
+              borderRadius: "8px",
+              marginBottom: "20px",
+              fontSize: "14px",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* =====================================
+            LOGIN FORM
+        ====================================== */}
+
+        <form onSubmit={handleLogin}>
+
+          {/* EMAIL */}
+
+          <div style={{ marginBottom: "18px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "7px",
+                fontSize: "14px",
+                fontWeight: "600",
+                color: "#334155",
+              }}
+            >
+              Email Address
+            </label>
+
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={styles.input}
               placeholder="Enter your email"
+              value={email}
+              autoComplete="email"
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError("");
+              }}
+              onKeyDown={handleEmailKeyDown}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "12px 14px",
+                borderRadius: "8px",
+                border: "1px solid #cbd5e1",
+                outline: "none",
+                fontSize: "14px",
+              }}
             />
           </div>
 
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Password</label>
+          {/* PASSWORD */}
+
+          <div style={{ marginBottom: "22px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "7px",
+                fontSize: "14px",
+                fontWeight: "600",
+                color: "#334155",
+              }}
+            >
+              Password
+            </label>
+
             <input
+              ref={passwordRef}
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={styles.input}
               placeholder="Enter your password"
+              value={password}
+              autoComplete="current-password"
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "12px 14px",
+                borderRadius: "8px",
+                border: "1px solid #cbd5e1",
+                outline: "none",
+                fontSize: "14px",
+              }}
             />
           </div>
 
-          <button 
-            type="submit" 
-            disabled={loading} 
-            style={styles.button}
+          {/* LOGIN BUTTON */}
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "13px",
+              border: "none",
+              borderRadius: "8px",
+              background: loading
+                ? "#94a3b8"
+                : "#2563eb",
+              color: "#ffffff",
+              fontSize: "15px",
+              fontWeight: "700",
+              cursor: loading
+                ? "not-allowed"
+                : "pointer",
+            }}
           >
-            {loading ? 'Logging in...' : 'Log in'}
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
-        <p style={styles.footerText}>
-          No account yet? <Link to="/register" style={styles.link}>Register here</Link>
-        </p>
+        {/* =====================================
+            REGISTER
+        ====================================== */}
+
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: "22px",
+            fontSize: "14px",
+            color: "#64748b",
+          }}
+        >
+          Don't have an account?{" "}
+
+          <Link
+            to="/register"
+            style={{
+              color: "#2563eb",
+              fontWeight: "600",
+              textDecoration: "none",
+            }}
+          >
+            Register
+          </Link>
+        </div>
+
+        {/* =====================================
+            BACK HOME
+        ====================================== */}
+
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: "15px",
+          }}
+        >
+          <Link
+            to="/"
+            style={{
+              color: "#64748b",
+              fontSize: "13px",
+              textDecoration: "none",
+            }}
+          >
+            ← Back to Home
+          </Link>
+        </div>
+
       </div>
     </div>
   );
-};
-
-// Clean styling object matching your UI design
-const styles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '80vh',
-    padding: '20px',
-  },
-  card: {
-    width: '100%',
-    maxWidth: '420px',
-    background: '#ffffff',
-    padding: '30px',
-    borderRadius: '12px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-  },
-  title: {
-    marginBottom: '20px',
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  inputGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-  },
-  label: {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#374151',
-  },
-  input: {
-    padding: '10px 14px',
-    borderRadius: '8px',
-    border: '1px solid #D1D5DB',
-    fontSize: '14px',
-    outline: 'none',
-  },
-  button: {
-    marginTop: '10px',
-    padding: '12px',
-    borderRadius: '8px',
-    border: 'none',
-    background: '#0F172A',
-    color: '#ffffff',
-    fontSize: '15px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
-  errorBanner: {
-    marginBottom: '15px',
-    padding: '10px',
-    background: '#FEE2E2',
-    color: '#991B1B',
-    borderRadius: '6px',
-    fontSize: '14px',
-  },
-  footerText: {
-    marginTop: '20px',
-    textAlign: 'center',
-    fontSize: '14px',
-    color: '#6B7280',
-  },
-  link: {
-    color: '#2563EB',
-    textDecoration: 'none',
-    fontWeight: '500',
-  }
 };
 
 export default Login;

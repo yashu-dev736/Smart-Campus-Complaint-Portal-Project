@@ -1,19 +1,21 @@
-const admin = require('firebase-admin');
+const { initializeApp, cert, getApps } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const admin = require('firebase-admin'); // <-- Required so admin is defined!
 const serviceAccount = require('./serviceAccountKey.json');
 
 let db;
 
 try {
-  if (!admin.apps?.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+  if (!getApps().length) {
+    initializeApp({
+      credential: cert(serviceAccount)
     });
   }
-  db = admin.firestore();
-  console.log('Firebase Firestore Connected Successfully!');
+  
+  db = getFirestore();
+  console.log('Firebase Firestore Connected Successfully & Ready!');
 } catch (error) {
-  console.error('Firebase Admin Initialization Error:', error.message);
+  console.error('FATAL Firebase Setup Error:', error.message);
 }
 
-// Export both admin and db
-module.exports = { admin, db };
+module.exports = { db, admin };

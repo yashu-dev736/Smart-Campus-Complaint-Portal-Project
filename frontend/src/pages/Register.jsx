@@ -5,7 +5,7 @@ const Register = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('student');
+  const [role, setRole] = useState('parent');
   const [department, setDepartment] = useState('General');
   
   const [error, setError] = useState('');
@@ -94,15 +94,15 @@ const Register = () => {
 
           <div style={styles.inputGroup}>
             <label style={styles.label}>Role</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              style={styles.input}
-            >
-              <option value="student">Student</option>
-              <option value="staff">Staff</option>
-              <option value="admin">Admin</option>
-            </select>
+           <select
+  value={role}
+  onChange={(e) => setRole(e.target.value)}
+  style={styles.input}
+>
+  <option value="parent">Parent</option>
+  <option value="staff">Staff</option>
+  <option value="admin">Admin</option>
+</select>
           </div>
 
           <div style={styles.inputGroup}>

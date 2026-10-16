@@ -11,6 +11,10 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
+    if (!db) {
+      return res.status(500).json({ message: 'Database connection is not initialized' });
+    }
+
     // Check if user already exists in Firestore
     const usersRef = db.collection('users');
     const snapshot = await usersRef.where('email', '==', email).get();
@@ -45,7 +49,7 @@ const register = async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'User registered successfully',
       token,
       user: {
@@ -58,7 +62,7 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration Error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    return res.status(500).json({ message: 'Server error during registration', error: error.message });
   }
 };
 
@@ -69,6 +73,10 @@ const login = async (req, res) => {
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    if (!db) {
+      return res.status(500).json({ message: 'Database connection is not initialized' });
     }
 
     // Find user by email
@@ -97,7 +105,7 @@ const login = async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Login successful',
       token,
       user: {
@@ -110,11 +118,11 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error('Login Error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    return res.status(500).json({ message: 'Server error during login', error: error.message });
   }
 };
 
-// Explicit exports to fix [object Undefined] issues
+// Explicit exports
 module.exports = {
   register,
   login
